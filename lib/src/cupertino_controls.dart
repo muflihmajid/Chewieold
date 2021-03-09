@@ -8,6 +8,7 @@ import 'package:chewie/src/cupertino_progress_bar.dart';
 import 'package:chewie/src/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:open_iconic_flutter/open_iconic_flutter.dart';
 import 'package:video_player/video_player.dart';
 
@@ -77,7 +78,8 @@ class _CupertinoControlsState extends State<CupertinoControls> {
           absorbing: _hideStuff,
           child: Column(
             children: <Widget>[
-              _buildTopBar(backgroundColor, iconColor, barHeight, buttonPadding),
+              _buildTopBar(
+                  backgroundColor, iconColor, barHeight, buttonPadding),
               _buildHitArea(),
               _buildBottomBar(backgroundColor, iconColor, barHeight),
             ],
@@ -392,20 +394,40 @@ class _CupertinoControlsState extends State<CupertinoControls> {
         right: marginSize,
         left: marginSize,
       ),
-      child: Row(
-        children: <Widget>[
-          chewieController.allowFullScreen
-              ? _buildExpandButton(
-                  backgroundColor, iconColor, barHeight, buttonPadding)
-              : Container(),
-          Expanded(child: Container()),
-          chewieController.allowMuting
-              ? _buildMuteButton(controller, backgroundColor, iconColor,
-                  barHeight, buttonPadding)
-              : Container(),
-        ],
+      child: AnimatedOpacity(
+        opacity: _hideStuff ? 0.0 : 1.0,
+        duration: Duration(milliseconds: 300),
+        child: Row(
+          children: <Widget>[
+            SizedBox(width: MediaQuery.of(context).size.height * 0.1),
+            IconButton(
+                icon: Icon(Icons.arrow_back_ios),
+                color: Colors.white70,
+                onPressed: exitAndBack),
+            Text(
+              chewieController.title,
+              style: TextStyle(color: Colors.white70, fontSize: 20),
+            )
+            // chewieController.allowFullScreen
+            //     ? _buildExpandButton(
+            //         backgroundColor, iconColor, barHeight, buttonPadding)
+            //     : Container(),
+            // Expanded(child: Container()),
+            // chewieController.allowMuting
+            //     ? _buildMuteButton(controller, backgroundColor, iconColor,
+            //         barHeight, buttonPadding)
+            //     : Container(),
+          ],
+        ),
       ),
     );
+  }
+
+  void exitAndBack() {
+    Navigator.of(context).pushNamedAndRemoveUntil(chewieController.fromRoute,
+        ModalRoute.withName(chewieController.fromRoute));
+    Navigator.of(context).pop();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   void _cancelAndRestartTimer() {

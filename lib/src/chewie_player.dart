@@ -5,8 +5,8 @@ import 'package:chewie/src/player_with_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:screen/screen.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock/wakelock.dart';
 
 typedef Widget ChewieRoutePageBuilder(
     BuildContext context,
@@ -62,7 +62,7 @@ class ChewieState extends State<Chewie> {
       _isFullScreen = true;
       await _pushFullScreenWidget(context);
     } else if (_isFullScreen) {
-      Navigator.of(context).pop();
+      Navigator.of(context, rootNavigator: true).pop();
       _isFullScreen = false;
     }
   }
@@ -75,18 +75,49 @@ class ChewieState extends State<Chewie> {
     );
   }
 
+  void exitAndBack() {
+    Navigator.of(context).pushNamedAndRemoveUntil(widget.controller.fromRoute, ModalRoute.withName(widget.controller.fromRoute));
+    Navigator.of(context).pop();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
+
   Widget _buildFullScreenVideo(
       BuildContext context,
       Animation<double> animation,
       _ChewieControllerProvider controllerProvider) {
-    return Scaffold(
-      resizeToAvoidBottomPadding: false,
-      body: Container(
-        alignment: Alignment.center,
-        color: Colors.black,
-        child: controllerProvider,
-      ),
-    );
+    return WillPopScope(
+      onWillPop: () {
+        exitAndBack();
+        return Future<bool>.value(false);
+      },
+      child: Scaffold(
+        // appBar: AppBar (
+        // iconTheme: IconThemeData(
+        //     color: Color.fromRGBO(255, 255, 255, 1.0)),
+        // actionsIconTheme: IconThemeData(
+        //     color: Color.fromRGBO(255, 255, 255, 1.0)),
+        // automaticallyImplyLeading: true,
+        // elevation: 0.1,
+        // backgroundColor: Color.fromRGBO(0, 0, 0, 1.0),
+        // title: Text(
+        //   widget.controller.title,
+        //   style: TextStyle(
+        //     fontFamily: "MMCOFFICE-Regular", fontWeight: FontWeight.w700),
+        // ),
+        // leading: IconButton(
+        //   onPressed: () {
+        //     exitAndBack();
+        //   },
+        //   icon: Icon(Icons.arrow_back),
+        //   ),
+        // ),
+        resizeToAvoidBottomPadding: false,
+        body: Container(
+          alignment: Alignment.center,
+          color: Colors.black,
+          child: controllerProvider,
+        ),
+    ));
   }
 
   AnimatedWidget _defaultRoutePageBuilder(
@@ -136,17 +167,16 @@ class ChewieState extends State<Chewie> {
     }
 
     if (!widget.controller.allowedScreenSleep) {
-      Screen.keepOn(true);
+      Wakelock.enable();
     }
 
-    await Navigator.of(context).push(route);
+    await Navigator.of(context, rootNavigator: true).push(route);
     _isFullScreen = false;
     widget.controller.exitFullScreen();
 
-    bool isKeptOn = await Screen.isKeptOn;
-    if (isKeptOn) {
-      Screen.keepOn(false);
-    }
+    // The wakelock plugins checks whether it needs to perform an action internally,
+    // so we do not need to check Wakelock.isEnabled.
+    Wakelock.disable();
 
     SystemChrome.setEnabledSystemUIOverlays(
         widget.controller.systemOverlaysAfterFullScreen);
@@ -186,6 +216,8 @@ class ChewieController extends ChangeNotifier {
     this.isLive = false,
     this.allowFullScreen = true,
     this.allowMuting = true,
+    this.title = "Default",
+    this.fromRoute,
     this.systemOverlaysAfterFullScreen = SystemUiOverlay.values,
     this.deviceOrientationsAfterFullScreen = const [
       DeviceOrientation.portraitUp,
@@ -263,6 +295,11 @@ class ChewieController extends ChangeNotifier {
 
   /// Defines if the mute control should be shown
   final bool allowMuting;
+
+  // Defines title
+  final String title;
+
+  final String fromRoute;
 
   /// Defines the system overlays visible after exiting fullscreen
   final List<SystemUiOverlay> systemOverlaysAfterFullScreen;
